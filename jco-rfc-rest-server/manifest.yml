@@ -1,0 +1,24 @@
+---
+applications:
+
+- name: jco-rfc-rest-server
+  memory: 1500M
+  timeout: 300
+  random-route: true
+  path: application/target/jco-rfc-rest-server-application.war
+  buildpacks:
+    - sap_java_buildpack
+  env:
+    USE_JCO: "true"
+    TARGET_RUNTIME: tomee7
+    SET_LOGGING_LEVEL: '{ROOT: INFO, com.sap.cloud.sdk: INFO}'
+    JBP_CONFIG_SAPJVM_MEMORY_SIZES: 'metaspace:128m..'
+    xsuaa_connectivity_instance_name: "jco_xsuaa"
+    connectivity_instance_name: "jco_connectivity"
+    destination_instance_name: "jco_destination"
+    
+  services:
+    - jco_xsuaa
+    - jco_connectivity
+    - jco_destination
+    - jco-app-logging
