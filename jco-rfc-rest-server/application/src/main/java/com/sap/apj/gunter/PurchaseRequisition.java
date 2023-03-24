@@ -56,7 +56,7 @@ public class PurchaseRequisition extends HttpServlet {
 	    });
 	    return paramList;
 	}
-	
+		
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
@@ -64,8 +64,6 @@ public class PurchaseRequisition extends HttpServlet {
 		// Handle POST request
 	    // ...
 	}	
-	
-	
 	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -105,13 +103,11 @@ public class PurchaseRequisition extends HttpServlet {
 			JCoParameterList exports = rfcFunction.getExportParameterList();
 			JCoParameterList tables = rfcFunction.getTableParameterList();
 			
-			JCoStructure prHeader = exports.getStructure("PRHEADER");
-            String prNumber = prHeader.getString("PREQ_NO");        
-            String prType = prHeader.getString("PR_TYPE");       
-            
-            // Prepare JSON response
-            jsonResponse.put("prNumber", prNumber);
-            jsonResponse.put("prType", prType);
+			// Dynamic extract of exports
+			JSONObject jExports = new JSONObject(exports.toJSON());
+			jsonResponse.put("exports", jExports);
+			JSONObject jTables = new JSONObject(tables.toJSON());
+			jsonResponse.put("tables", jTables);
             
             response.setContentType("application/json");
             response.getWriter().write(jsonResponse.toString());
