@@ -13,12 +13,12 @@ applications:
     TARGET_RUNTIME: tomee7
     SET_LOGGING_LEVEL: '{ROOT: INFO, com.sap.cloud.sdk: INFO}'
     JBP_CONFIG_SAPJVM_MEMORY_SIZES: 'metaspace:128m..'
-    xsuaa_connectivity_instance_name: "jco_xsuaa"
+    xsuaa_connectivity_instance_name: "jco-rfc-rest-server-xsuaa"
     connectivity_instance_name: "jco_connectivity"
     destination_instance_name: "jco_destination"
     
   services:
-    - jco_xsuaa
+    - jco-rfc-rest-server-xsuaa
     - jco_connectivity
     - jco_destination
     - jco-app-logging

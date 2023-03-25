@@ -1,0 +1,30 @@
+{
+  "xsappname": "jco-rfc-rest-server",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.Display",
+      "description": "GET requests on BAPI"
+    },
+    {
+      "name": "$XSAPPNAME.Modify",
+      "description": "POST requests on BAPI"
+    }
+  ],
+  "role-templates": [
+    {
+      "name": "JCo-REST-RFC-Server-Viewer",
+      "description": "Required to run GET requests for RFC BAPI calls.",
+      "scope-references"     : [
+        "$XSAPPNAME.Display"
+      ]
+    },
+    {
+      "name": "JCo-REST-RFC-Server-Administrator",
+      "description": "Required to run POST requests for RFC BAPI calls.",
+      "scope-references"     : [
+        "$XSAPPNAME.Modify"
+      ]
+    }
+  ]
+}
