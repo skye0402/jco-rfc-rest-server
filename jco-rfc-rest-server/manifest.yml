@@ -16,6 +16,7 @@ applications:
     xsuaa_connectivity_instance_name: "jco-rfc-rest-server-xsuaa"
     connectivity_instance_name: "jco_connectivity"
     destination_instance_name: "jco_destination"
+    ENABLE_SECURITY_JAVA_API_V2: "true"
     
   services:
     - jco-rfc-rest-server-xsuaa

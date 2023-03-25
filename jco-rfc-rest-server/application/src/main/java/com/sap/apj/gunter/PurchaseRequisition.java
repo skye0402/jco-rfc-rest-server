@@ -1,8 +1,7 @@
 package com.sap.apj.gunter;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.security.Principal;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -19,28 +18,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sap.conn.jco.AbapException;
+import com.sap.conn.jco.JCoContext;
 import com.sap.conn.jco.JCoDestination;
 import com.sap.conn.jco.JCoDestinationManager;
 import com.sap.conn.jco.JCoException;
 import com.sap.conn.jco.JCoFunction;
 import com.sap.conn.jco.JCoParameterList;
-import com.sap.conn.jco.JCoStructure;
 import com.sap.conn.jco.JCoRepository;
-
-import com.sap.cloud.sdk.cloudplatform.security.AuthToken;
-import static com.sap.cloud.sdk.cloudplatform.security.AuthTokenAccessor.getCurrentToken;
-
+import com.sap.cloud.sdk.cloudplatform.security.RolesAllowed;
 import com.sap.cloud.security.client.HttpClientException;
 import com.sap.cloud.security.client.HttpClientFactory;
 import com.sap.cloud.security.config.Environments;
 import com.sap.cloud.security.config.OAuth2ServiceConfiguration;
-import com.sap.cloud.security.token.AccessToken;
-import com.sap.cloud.security.token.TokenClaims;
 import com.sap.cloud.security.xsuaa.client.DefaultOAuth2TokenService;
-import com.sap.cloud.security.xsuaa.client.OAuth2TokenResponse;
 import com.sap.cloud.security.xsuaa.client.XsuaaDefaultEndpoints;
 import com.sap.cloud.security.xsuaa.tokenflows.XsuaaTokenFlows;
-import com.sap.cloud.security.token.*;
 
 
 /**
@@ -52,7 +44,7 @@ import com.sap.cloud.security.token.*;
  */
 
 @WebServlet("/rfc/*")
-@ServletSecurity(@HttpConstraint(rolesAllowed = { "Display" }))
+@ServletSecurity(@HttpConstraint(rolesAllowed = { "Display", "Modify" }))
 public class PurchaseRequisition extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private static final Logger logger = LoggerFactory.getLogger(PurchaseRequisition.class);
@@ -89,27 +81,130 @@ public class PurchaseRequisition extends HttpServlet {
 	    });
 	    return paramList;
 	}
+	
+	private JSONObject convertToJson(JSONObject jInput, String bapiParam) {
+		JSONObject jData = new JSONObject();
+		try {
+			jData = jInput.getJSONObject(bapiParam);
+		} catch (JSONException e){
+			logger.warn("No BAPI parameters for " + bapiParam + ".");
+			return null;
+		}
+		return jData;
+	}
 		
 	@Override
+	//@RolesAllowed({"Modify"})
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		PrintWriter responseWriter = response.getWriter();
-		// Handle POST request
-	    // ...
+		
+		JSONObject jsonResponse = new JSONObject();
+		JSONObject jBody = new JSONObject();
+
+		// Get request parameters
+		String functionName = request.getParameter("fm");
+		logger.info("Function module: " + functionName);
+		StringBuilder sbBody = new StringBuilder();
+		BufferedReader brReqBody = request.getReader();
+		String line;
+	    while ((line = brReqBody.readLine()) != null) {
+	    	sbBody.append(line);
+	    }
+	    String requestBody = sbBody.toString();
+	    try {
+	    	jBody = new JSONObject(requestBody);
+		} catch (JSONException e){
+			jsonResponse.put("exception", "Body couldn't be converted to JSON.");
+			jsonResponse.put("errormessage", e.getMessage());
+			response.setStatus(400);
+            response.getWriter().write(jsonResponse.toString());
+            return;
+		}
+	    
+	    // Is null if no data
+	    JSONObject jImports = convertToJson(jBody, "imports");
+	    JSONObject jTables = convertToJson(jBody, "tables");
+	    
+	    try {
+			// Function module call preparation
+			JCoDestination btpDest = JCoDestinationManager.getDestination(btpDestination);
+			JCoContext.begin(btpDest); // A bracket around the LUW
+			JCoFunction rfcFunction = getRfcFunction(btpDest, functionName);
+			JCoParameterList bapiImports = rfcFunction.getImportParameterList();
+			JCoParameterList bapiTables = rfcFunction.getTableParameterList();
+			
+			// Fill imports structures and tables (if applicable)
+			logger.info("Getting function module metadata...");
+			bapiImports.getMetaData();
+			bapiTables.getMetaData();
+			
+			if (jImports != null) {
+				logger.info("Filling BAPI import: " + jImports.toString());
+				bapiImports.fromJSON(jImports.toString());
+			}
+			if (jTables != null) {
+				logger.info("Filling BAPI tables: " + jTables.toString());
+				bapiTables.fromJSON(jTables.toString());
+			}
+			// Execute BAPI call
+			logger.info("Executing BAPI call...");
+			rfcFunction.execute(btpDest);
+			
+			// Commit work of BAPI
+			JCoFunction commitFunction = btpDest.getRepository().getFunction("BAPI_TRANSACTION_COMMIT");
+			commitFunction.execute(btpDest);
+			JCoContext.end(btpDest); // Ending the context here
+			
+			// Work with return data from BAPI
+			JCoParameterList bapiExports = rfcFunction.getExportParameterList();
+			bapiTables = rfcFunction.getTableParameterList();
+			
+			// Dynamic extract of exports
+			JSONObject jExports = new JSONObject(bapiExports.toJSON());
+			jsonResponse.put("exports", jExports);
+			jTables = new JSONObject(bapiTables.toJSON());
+			jsonResponse.put("tables", jTables);
+            
+			// Success, respond with JSON result
+			logger.info("Sending JSON result from BAPI call...");
+            response.getWriter().write(jsonResponse.toString());
+            
+			response.setStatus(200);			
+	    }
+		catch (AbapException e) {
+			// Only if the ABAP FM throws exceptions
+			jsonResponse.put("exception", "ABAP exception occured in " + functionName + " in destination " + btpDestination + ".");
+			jsonResponse.put("errormessage", e.getMessage());
+			response.setStatus(400);
+            response.getWriter().write(jsonResponse.toString());
+            logger.error("ABAP FM exception: " + e.getMessage());
+            return;
+		}
+		catch (JCoException e) {
+			jsonResponse.put("exception", "JCo exception occurred while executing " + functionName + " in destination " + btpDestination + ".");
+			jsonResponse.put("errormessage", e.getMessage());
+			response.setStatus(400);
+            response.getWriter().write(jsonResponse.toString());
+            logger.error("JCo exception: " + e.getMessage());
+            return;
+		}
+		catch (RuntimeException e) {
+			jsonResponse.put("exception", "Runtime exception.");
+			jsonResponse.put("errormessage", e.getMessage());
+			response.setStatus(400);
+            response.getWriter().write(jsonResponse.toString());
+            logger.error("Runtime exception: " + e.getMessage());
+            return;
+		}
 	}	
 	
 	@Override
+	@RolesAllowed({"Display", "Modify"})
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		JSONObject jsonResponse = new JSONObject();
 		JSONObject jQuery = new JSONObject();
-		response.setContentType("application/json");
 		
-		// Get token
-		OAuth2TokenResponse tokenResponse = tokenFlows.clientCredentialsTokenFlow().execute();
-		logger.info("Access-Token-Payload:" + tokenResponse.getDecodedAccessToken().getPayload());
-		
-
 		// Get request parameters
 		String functionName = request.getParameter("fm");
 		logger.info("Function module: " + functionName);
@@ -149,7 +244,6 @@ public class PurchaseRequisition extends HttpServlet {
             
 			// Success, respond with JSON result
 			logger.info("Sending JSON result from BAPI call...");
-            response.setContentType("application/json");
             response.getWriter().write(jsonResponse.toString());
             
 			response.setStatus(200);
@@ -184,6 +278,8 @@ public class PurchaseRequisition extends HttpServlet {
 	@Override
 	protected void service(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		response.setContentType("application/json");
+		logger.info("Request method " + request.getMethod() + " received.");
 		if (request.getMethod().equals("GET")) {
 			doGet(request, response);
 		} else if (request.getMethod().equals("POST")) {
