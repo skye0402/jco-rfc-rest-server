@@ -123,15 +123,15 @@ public class PurchaseRequisition extends HttpServlet {
 			
 			// Fill imports structures and tables (if applicable)
 			logger.info("Getting function module metadata...");
-			bapiImports.getMetaData();
-			bapiTables.getMetaData();
 			
 			if (jImports != null) {
 				logger.info("Filling BAPI import: " + jImports.toString());
+				bapiImports.getMetaData();
 				bapiImports.fromJSON(jImports.toString());
 			}
 			if (jTables != null) {
 				logger.info("Filling BAPI tables: " + jTables.toString());
+				bapiTables.getMetaData();
 				bapiTables.fromJSON(jTables.toString());
 			}
 			// Execute BAPI call
@@ -150,11 +150,19 @@ public class PurchaseRequisition extends HttpServlet {
 			JCoParameterList bapiExports = rfcFunction.getExportParameterList();
 			bapiTables = rfcFunction.getTableParameterList();
 			
-			// Dynamic extract of exports
-			JSONObject jExports = new JSONObject(bapiExports.toJSON());
-			jsonResponse.put("exports", jExports);
-			jTables = new JSONObject(bapiTables.toJSON());
-			jsonResponse.put("tables", jTables);
+			// Dynamic extract of imports, exports and tables
+			if (bapiImports != null) {
+				jImports = new JSONObject(bapiImports.toJSON());
+				jsonResponse.put("imports", jImports);
+			}
+			if (bapiExports != null) {
+				JSONObject jExports = new JSONObject(bapiExports.toJSON());
+				jsonResponse.put("exports", jExports);	
+			}
+			if (bapiTables != null) {
+				jTables = new JSONObject(bapiTables.toJSON());
+				jsonResponse.put("tables", jTables);	
+			}
             
 			// Success, respond with JSON result
 			logger.info("Sending JSON result from BAPI call...");
