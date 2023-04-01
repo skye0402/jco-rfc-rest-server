@@ -100,6 +100,7 @@ public class PurchaseRequisition extends HttpServlet {
 		try {
 	    	jData = new JSONObject(jsonData);
 		} catch (JSONException e){
+			logger.error("Error: " + e.getMessage());
 			jsonResponse.put("exception", "Body couldn't be converted to JSON.");
 			jsonResponse.put("errormessage", e.getMessage());
 			response.setStatus(400);
@@ -197,7 +198,7 @@ public class PurchaseRequisition extends HttpServlet {
 	}
 	
 	@Override
-	//@RolesAllowed({"Modify"})
+	@RolesAllowed({"Modify"})
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {	
 		
@@ -244,6 +245,15 @@ public class PurchaseRequisition extends HttpServlet {
 			throws ServletException, IOException {
 		response.setContentType("application/json");
 		logger.info("Request method " + request.getMethod() + " received.");
+		String functionName = request.getParameter("fm");
+		if (functionName == null) {
+			JSONObject jsonResponse = new JSONObject();
+			jsonResponse.put("exception", "No function module specified.");
+			response.setStatus(400);
+            response.getWriter().write(jsonResponse.toString());
+            logger.error("Runtime exception: No function module specified.");
+            return;
+		}		
 		if (request.getMethod().equals("GET")) {
 			doGet(request, response);
 		} else if (request.getMethod().equals("POST")) {
