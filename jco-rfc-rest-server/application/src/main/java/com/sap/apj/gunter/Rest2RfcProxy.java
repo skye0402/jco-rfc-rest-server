@@ -22,15 +22,9 @@ import com.sap.conn.jco.JCoContext;
 import com.sap.conn.jco.JCoDestination;
 import com.sap.conn.jco.JCoDestinationManager;
 import com.sap.conn.jco.JCoException;
-import com.sap.conn.jco.JCoField;
 import com.sap.conn.jco.JCoFunction;
-import com.sap.conn.jco.JCoFunctionTemplate;
-import com.sap.conn.jco.JCoListMetaData;
 import com.sap.conn.jco.JCoParameterList;
-import com.sap.conn.jco.JCoRecordMetaData;
 import com.sap.conn.jco.JCoRepository;
-import com.sap.conn.jco.JCoStructure;
-import com.sap.conn.jco.JCoTable;
 import com.sap.cloud.sdk.cloudplatform.security.RolesAllowed;
 import com.sap.cloud.security.client.HttpClientException;
 import com.sap.cloud.security.client.HttpClientFactory;
@@ -40,13 +34,11 @@ import com.sap.cloud.security.xsuaa.client.DefaultOAuth2TokenService;
 import com.sap.cloud.security.xsuaa.client.XsuaaDefaultEndpoints;
 import com.sap.cloud.security.xsuaa.tokenflows.XsuaaTokenFlows;
 
-
 /**
- * Sample application that uses the Connectivity service. In particular, it is
- * making use of the capability to invoke a function module in an ABAP system
- * via RFC
- *
- * Note: The JCo APIs are available under <code>com.sap.conn.jco</code>.
+ * REST to RFC proxy - a project to use RFC function modules in web services.
+ * Making use of the capability to invoke a function module in an ABAP system
+ * via RFC through BTP RFC destination service.
+ * SAP Japan 2023 - Gunter Albrecht
  */
 
 @WebServlet("/rfc/*")
@@ -236,7 +228,9 @@ public class Rest2RfcProxy extends HttpServlet {
 			// Submit to BAPI or RFC FM - No commit
 			handleRequest(functionName, query, false, response);
 		} else { // Deliver the structure back to the caller (like $metadata)
-//			// TODO
+//			// This has not been implemented - idea would be to get a
+			// nicer looking metadata structure than from an empty RFC call.
+			// TODO
 		}
 	}
 					
