@@ -51,9 +51,9 @@ import com.sap.cloud.security.xsuaa.tokenflows.XsuaaTokenFlows;
 
 @WebServlet("/rfc/*")
 @ServletSecurity(@HttpConstraint(rolesAllowed = { "Display", "Modify" }))
-public class PurchaseRequisition extends HttpServlet {
+public class Rest2RfcProxy extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(PurchaseRequisition.class);
+	private static final Logger logger = LoggerFactory.getLogger(Rest2RfcProxy.class);
 	private static final String btpDestination = "S4HANA2021-RFC";
 	
 	private static XsuaaTokenFlows tokenFlows;

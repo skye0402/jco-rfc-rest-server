@@ -7,7 +7,6 @@
     <description>jco-rfc-rest-server - Application</description>
 
     <artifactId>jco-rfc-rest-server-application</artifactId>
-    <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
 
     <parent>
