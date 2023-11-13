@@ -1,0 +1,3 @@
+// Call https://<server address>/rfc/?fm=BAPI_MATERIAL_GETALL&query={%22imports%22:{%22MATERIAL%22:%22000000000000000031%22,%22PLANT%22:%221710%22}}
+// Return material data for plant 1710 for material 31
+// You can call any BAPI or RFC module with a GET to receive it's calling structure/ return structure
